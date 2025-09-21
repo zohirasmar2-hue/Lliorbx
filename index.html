@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <title>Roblox Lookup</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body{font-family:system-ui,Arial;padding:20px;background:#f9f9fb}
     .card{max-width:720px;margin:auto;background:#fff;padding:16px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
     input{padding:8px;width:60%;border-radius:6px;border:1px solid #ccc}
     button{padding:8px 12px;border:none;border-radius:6px;background:#0066ff;color:#fff}
     img{max-width:120px;border-radius:8px}
-    pre{background:#f1f1f5;padding:8px;border-radius:6px}
+    pre{background:#f1f1f5;padding:8px;border-radius:6px;overflow:auto}
   </style>
 </head>
 <body>
@@ -23,19 +24,46 @@
     const btn=document.getElementById("btn");
     btn.onclick=async()=>{
       const u=document.getElementById("username").value.trim();
-      if(!u)return;
-      document.getElementById("result").innerHTML="...جاري البحث";
-      const resp=await fetch(`/api/roblox?username=${encodeURIComponent(u)}`);
-      if(!resp.ok){document.getElementById("result").innerText="خطأ";return;}
-      const data=await resp.json();
-      document.getElementById("result").innerHTML=`
-        <img src="${data.avatarUrl}" alt="avatar"/><br/>
-        <b>${data.displayName||data.username}</b> (${data.username})<br/>
-        Id: ${data.id}<br/>
-        Created: ${data.created||'-'}<br/>
-        <a href="${data.profileUrl}" target="_blank">فتح البروفايل</a>
-        <pre>${JSON.stringify(data,null,2)}</pre>
-      `;
+      if(!u){
+        document.getElementById("result").innerText="دخل اسم صالح";
+        return;
+      }
+      document.getElementById("result").innerText="...جاري البحث";
+
+      try{
+        // الرابط كامل للـendpoint على مشروعك lliorbx
+        const resp=await fetch('https://lliorbx.vercel.app/api/roblox?username='+encodeURIComponent(u));
+        if(!resp.ok){
+          const txt=await resp.text();
+          document.getElementById("result").innerHTML=`<b>خطأ: ${resp.status}</b><pre>${txt}</pre>`;
+          return;
+        }
+        const data=await resp.json();
+        if(data.error){
+          document.getElementById("result").innerHTML=`<b>خطأ:</b> ${data.error}`;
+          return;
+        }
+
+        document.getElementById("result").innerHTML=`
+          <div style="display:flex;gap:16px;align-items:center">
+            <div>
+              ${data.avatarUrl?`<img src="${data.avatarUrl}" alt="avatar"/>`:`<div style="width:120px;height:120px;background:#eee;border-radius:8px"></div>`}
+            </div>
+            <div>
+              <h3>${data.displayName||data.username} <small>(${data.username})</small></h3>
+              <div>Id: ${data.id}</div>
+              <div>Created: ${data.created||'-'}</div>
+              <div>Description: ${data.description||'-'}</div>
+              <div style="margin-top:8px"><a href="${data.profileUrl}" target="_blank">فتح البروفايل على Roblox</a></div>
+              ${data.presence?`<div>Presence: ${data.presence.rootPlaceId?'In game ('+data.presence.rootPlaceId+')':(data.presence.userPresenceType||'Unknown')}</div>`:''}
+            </div>
+          </div>
+          <hr/>
+          <details><summary>Raw JSON</summary><pre>${JSON.stringify(data,null,2)}</pre></details>
+        `;
+      }catch(err){
+        document.getElementById("result").innerHTML=`<b>خطأ فالسيرفر</b><pre>${err.message}</pre>`;
+      }
     }
   </script>
 </body>
